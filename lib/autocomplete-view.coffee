@@ -1,11 +1,11 @@
 _ = require 'underscore-plus'
 {$, $$, Range, SelectListView}  = require 'atom'
 
-SuggestionProvider = require './suggestion-provider'
+AutocompleteModel = require './autocomplete-model'
 
 module.exports =
 class AutocompleteView extends SelectListView
-  suggestionProvider: null
+  autocompleteModel: null
   wordList: null
   wordRegex: /\w+/g
   originalSelectionBufferRanges: null
@@ -13,7 +13,7 @@ class AutocompleteView extends SelectListView
 
   initialize: (@editorView) ->
     super
-    @suggestionProvider = new SuggestionProvider(@editorView.editor)
+    @autocompleteModel = new AutocompleteModel(@editorView.editor)
     @addClass('autocomplete popover-list')
     {@editor} = @editorView
     @handleEvents()
@@ -29,7 +29,7 @@ class AutocompleteView extends SelectListView
   handleEvents: ->
     @list.on 'mousewheel', (event) -> event.stopPropagation()
 
-    @editorView.on 'editor:path-changed', => @suggestionProvider.setCurrentBuffer(@editor.getBuffer())
+    @editorView.on 'editor:path-changed', => @autocompleteModel.setCurrentBuffer(@editor.getBuffer())
     @editorView.command 'autocomplete:toggle', =>
       if @hasParent()
         @cancel()
@@ -48,7 +48,7 @@ class AutocompleteView extends SelectListView
   selectItemView: (item) ->
     super
     if match = @getSelectedItem()
-      @suggestionProvider.replaceSelectedTextWithMatch(match)
+      @autocompleteModel.replaceSelectedTextWithMatch(match)
 
   selectNextItemView: ->
     super
@@ -59,22 +59,22 @@ class AutocompleteView extends SelectListView
     false
 
   confirmed: (match) ->
-    @suggestionProvider.clearSelection()
+    @autocompleteModel.clearSelection()
     @cancel()
-    @suggestionProvider.insertMatch(match)
+    @autocompleteModel.insertMatch(match)
 
   cancelled: ->
     super
-    @suggestionProvider.stopAutoCompleting() if @suggestionProvider.isCompleting
+    @autocompleteModel.stopAutoCompleting() if @autocompleteModel.isCompleting
 
   attach: ->
 
     @aboveCursor = false
 
-    return @cancel() unless @suggestionProvider.startAutoCompleting()
+    return @cancel() unless @autocompleteModel.startAutoCompleting()
 
-    @suggestionProvider.buildWordList()
-    matches = @suggestionProvider.findMatchesForCurrentSelection()
+    @autocompleteModel.buildWordList()
+    matches = @autocompleteModel.findMatchesForCurrentSelection()
     @setItems(matches)
 
     if matches.length is 1
@@ -85,7 +85,7 @@ class AutocompleteView extends SelectListView
       @focusFilterEditor()
 
   setPosition: ->
-    {left, top} = @editorView.pixelPositionForScreenPosition(@suggestionProvider.originalCursorPosition)
+    {left, top} = @editorView.pixelPositionForScreenPosition(@autocompleteModel.originalCursorPosition)
     height = @outerHeight()
     width = @outerWidth()
     potentialTop = top + @editorView.lineHeight
